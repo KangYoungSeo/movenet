@@ -6,12 +6,20 @@ const process = require('process');
 const log = require('@vladmandic/pilogger');
 const tf = require('@tensorflow/tfjs-node');
 const canvas = require('canvas');
+const createCsvWirter = require('csv-writer').createObjectCsvWriter;
 const { pow } = require('@tensorflow/tfjs-node');
+
+
+//angle data init
+const txtHeader = ['num', 'ang1', 'ang2', 'ang3', 'ang4', 'ang5', 'ang6', 'ang7', 'ang8', 'label'];
+  const csvWriterHeader = txtHeader.map((el) => {
+    return {  id: el, title: el };
+  });
 
 //model list
 const modelOptions = {
-  // modelPath: 'file://model-lightning3/movenet-lightning.json',
-  modelPath: 'file://model-lightning4/movenet-lightning.json',
+   modelPath: 'file://model-lightning3/movenet-lightning.json',
+  //modelPath: 'file://model-lightning4/movenet-lightning.json',
   // modelPath: 'file://model-thunder3/movenet-thunder.json',
   // modelPath: 'file://model-thunder4/movenet-thunder.json',
 };
@@ -154,7 +162,7 @@ async function processResults(res, img) {
   return parts;
 }
 
-async function ComputeAngle(a,b,c){
+ function ComputeAngle(a,b,c){
   /*
   var o1 = Math.atan((array[7].y - array[5].y) / (array[7].x - array[5].x));
   var o2 = Math.atan((array[11].y - array[5].y) / (array[11].x - array[5].x));
@@ -175,7 +183,7 @@ async function ComputeAngle(a,b,c){
 }
 
 // compute angle between three dots
-async function getAngle(array){
+function getAngle(idx, array){
 
 /*
   //original computation code
@@ -185,30 +193,41 @@ async function getAngle(array){
   var ang1 = (o1-o2) * 180/Math.PI;
   log.info('angle computation result :', ang1);
 */
-
+  
+  let angles = { num : idx, 
+  ang1 : '', ang2 : '', ang3 : '', ang4 : '',  
+  ang5 : '', ang6 : '', ang7 : '', ang8 : '', label : '', 
+  };
+  
+  
   //angle 1 - right elow [8], right shoulder [6], right hip [12]
-  ComputeAngle(array[8],array[6],array[12]);
+  angles.ang1 = ComputeAngle(array[8],array[6],array[12]);
 
   //angle 2 - left elow[7], left shoulder[5], left hip[11]                                                                           
-  ComputeAngle(array[7],array[5],array[11]);
+  angles.ang2 = ComputeAngle(array[7],array[5],array[11]);
 
   //angle 3 - right shoulder[6], right elow[8], right wrist[10]
-  ComputeAngle(array[6],array[8],array[10]);
+  angles.ang3 = ComputeAngle(array[6],array[8],array[10]);
 
   //angle 4 - left shoulder[5], left elow[7], left wrist[9]
-  ComputeAngle(array[5],array[7],array[9]);
+  angles.ang4 = ComputeAngle(array[5],array[7],array[9]);
 
   //angle 5 - left hip[11], right hip[12], right knee[14]
-  ComputeAngle(array[11],array[12],array[14]);
+  angles.ang5 = ComputeAngle(array[11],array[12],array[14]);
 
   //angle 6 - right hip[12], left hip[11], left knee[13]
-  ComputeAngle(array[12],array[11],array[13]);
+  angles.ang6 = ComputeAngle(array[12],array[11],array[13]);
 
   //angle 7 - right hip[12], right knee[14] right ankle[16] 
-  ComputeAngle(array[12],array[14],array[16]);
+  angles.ang7 = ComputeAngle(array[12],array[14],array[16]);
 
   //angle 8 - left hip[11], left knee[13], left ankle[15]
-  ComputeAngle(array[11],array[13],array[15]);
+  angles.ang8 = ComputeAngle(array[11],array[13],array[15]);
+
+  //debug
+  //log.info('return result', angles);
+  
+  return angles;
 
 }
 
@@ -231,39 +250,66 @@ async function main() {
   // load image and get approprite tensor for it
   let inputSize = Object.values(model.modelSignature['inputs'])[0].tensorShape.dim[2].size;
   if (inputSize === -1) inputSize = 256;
+
+/*
   const imageFile = process.argv.length > 2 ? process.argv[2] : null;
   if (!imageFile || !fs.existsSync(imageFile)) {
     log.error('Specify a valid image file');
     process.exit();
   }
-  const img = await loadImage(imageFile, inputSize);
-  log.info('Loaded image:', img.fileName, 'inputShape:', img.inputShape, 'modelShape:', img.modelShape, 'decoded size:', img.size);
-
-  // run actual prediction
-  const t0 = process.hrtime.bigint();
-  // for (let i = 0; i < 99; i++) model.execute(img.tensor); // benchmarking
-  const res = model.execute(img.tensor);
-  const t1 = process.hrtime.bigint();
-  log.info('Inference time:', Math.round(parseInt((t1 - t0).toString()) / 1000 / 1000), 'ms');
-
-  // process results
-  const results = await processResults(res, img);
-
-  const t2 = process.hrtime.bigint();
-  log.info('Processing time:', Math.round(parseInt((t2 - t1).toString()) / 1000 / 1000), 'ms');
-
-  // print results
-  log.data('Results:', results);
+*/
   
 
-  //save result image
-  //to compare exact location of joint from each skeleton data
-  //await saveImage(results, img);
+  //save csv 
+  //init
+  
 
-  //joint 값을 활용하여 8개의 앵글 값 추출
-  await getAngle(results);
+  let result = [];
+  
+  //data extraction
+  for( i = 1; i < 2; i++){
+    const imageFile = "data/data"+ i +".jpg";
+    const img = await loadImage(imageFile, inputSize);
+    log.info('Loaded image:', img.fileName, 'inputShape:', img.inputShape, 'modelShape:', img.modelShape, 'decoded size:', img.size);
+
+    // run actual prediction
+    const t0 = process.hrtime.bigint();
+    // for (let i = 0; i < 99; i++) model.execute(img.tensor); // benchmarking
+
+    const res = model.execute(img.tensor);
+    const t1 = process.hrtime.bigint();
+    log.info('Inference time:', Math.round(parseInt((t1 - t0).toString()) / 1000 / 1000), 'ms');
+
+    // process results
+    const results = await processResults(res, img);
+
+    //const t2 = process.hrtime.bigint();
+    //log.info('Processing time:', Math.round(parseInt((t2 - t1).toString()) / 1000 / 1000), 'ms');
+
+    // print results
+    //log.data('Results:', results);
+  
+    //joint 값을 활용하여 8개의 앵글 값 추출
+    let data = await getAngle(i, results);
+    result.push(data);
+
+    //save result image
+    //to compare exact location of joint from each skeleton data
+    await saveImage(results, img);
+  }
+  
+  //save csv file 
+  const csvWriter = createCsvWirter({
+    path: 'csv-writer.csv', 
+    header: csvWriterHeader,
+  });
+
+  csvWriter.writeRecords(result).then(() => {
+    console.log('done!');
+  });
+
+
 
 }
-
 
 main();
