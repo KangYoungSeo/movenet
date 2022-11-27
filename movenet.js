@@ -1,5 +1,4 @@
 
-
 const fs = require('fs');
 const path = require('path');
 const process = require('process');
@@ -11,16 +10,16 @@ const { pow } = require('@tensorflow/tfjs-node');
 
 
 //angle data init
-const txtHeader = ['num', 'ang1', 'ang2', 'ang3', 'ang4', 'ang5', 'ang6', 'ang7', 'ang8', 'label'];
+const txtHeader = ['num', 'ang1', 'ang2', 'ang3', 'ang4', 'ang5', 'ang6', 'ang7', 'ang8', 'ang9', 'ang10', 'label'];
   const csvWriterHeader = txtHeader.map((el) => {
     return {  id: el, title: el };
   });
 
 //model list
 const modelOptions = {
-   modelPath: 'file://model-lightning3/movenet-lightning.json',
+  modelPath: 'file://model-lightning3/movenet-lightning.json',
   //modelPath: 'file://model-lightning4/movenet-lightning.json',
-  // modelPath: 'file://model-thunder3/movenet-thunder.json',
+  //modelPath: 'file://model-thunder3/movenet-thunder.json',
   // modelPath: 'file://model-thunder4/movenet-thunder.json',
 };
 
@@ -65,7 +64,6 @@ async function saveCSV(res){
   // (E) WRITE FILE
   await fileStream.write(myBlob);
   await fileStream.close();
-
 
 } 
 
@@ -162,12 +160,7 @@ async function processResults(res, img) {
   return parts;
 }
 
- function ComputeAngle(a,b,c){
-  /*
-  var o1 = Math.atan((array[7].y - array[5].y) / (array[7].x - array[5].x));
-  var o2 = Math.atan((array[11].y - array[5].y) / (array[11].x - array[5].x));
-  var ang1 = 180 - (o1-o2) * 180/Math.PI;
-  */
+ function ComputeAngle(idx,a,b,c){
 
   var aa = Math.sqrt(Math.pow(a.x -c.x,2) + Math.pow(a.y - c.y ,2));
   var bb = Math.sqrt(Math.pow(a.x -b.x,2) + Math.pow(a.y - b.y ,2));
@@ -177,52 +170,54 @@ async function processResults(res, img) {
 
   var ang = Math.acos(temp);
 
-  ang = ang*(180/Math.PI);
-  log.info('angle :', ang);
+  ang = ang * (180/Math.PI);
+  log.info('angle ' + idx + ':', ang);
+
   return ang;
 }
 
 // compute angle between three dots
-function getAngle(idx, array){
+function getAngle(idx, array, pose_idx){
 
-/*
-  //original computation code
-  var o1 = Math.atan((p1.y-p2.y),(p1.x-p2.x));
-  var o2 = Math.atan((p2.y-p3.y)/(p2.x-p3.x));
-  
-  var ang1 = (o1-o2) * 180/Math.PI;
-  log.info('angle computation result :', ang1);
-*/
+//어떤 자세인지 라벨링 설정 : 매개변수로 pose_idx를 받아와 자세의 어떤 부위인지 확인
+  let label_idx = ['arm_stretch_up', 'arm_stretch_upper_right', 'hurray',
+        'raise_right_leg', 'side_stretch_left_leg',  ' right_side_stretch'];
   
   let angles = { num : idx, 
-  ang1 : '', ang2 : '', ang3 : '', ang4 : '',  
-  ang5 : '', ang6 : '', ang7 : '', ang8 : '', label : '', 
+    ang1 : '', ang2 : '', ang3 : '', ang4 : '', ang5 : '', 
+    ang6 : '', ang7 : '', ang8 : '', ang9 : '', ang10 : '', 
+    label : label_idx[pose_idx], 
   };
   
-  
   //angle 1 - right elow [8], right shoulder [6], right hip [12]
-  angles.ang1 = ComputeAngle(array[8],array[6],array[12]);
+  angles.ang1 = ComputeAngle(1,array[8],array[6],array[12]);
 
   //angle 2 - left elow[7], left shoulder[5], left hip[11]                                                                           
-  angles.ang2 = ComputeAngle(array[7],array[5],array[11]);
+  angles.ang2 = ComputeAngle(2, array[7],array[5],array[11]);
 
   //angle 3 - right shoulder[6], right elow[8], right wrist[10]
-  angles.ang3 = ComputeAngle(array[6],array[8],array[10]);
+  angles.ang3 = ComputeAngle(3, array[6],array[8],array[10]);
 
   //angle 4 - left shoulder[5], left elow[7], left wrist[9]
-  angles.ang4 = ComputeAngle(array[5],array[7],array[9]);
+  angles.ang4 = ComputeAngle(4, array[5],array[7],array[9]);
 
   //angle 5 - left hip[11], right hip[12], right knee[14]
-  angles.ang5 = ComputeAngle(array[11],array[12],array[14]);
+  angles.ang5 = ComputeAngle(5, array[11],array[12],array[14]);
 
   //angle 6 - right hip[12], left hip[11], left knee[13]
-  angles.ang6 = ComputeAngle(array[12],array[11],array[13]);
+  angles.ang6 = ComputeAngle(6, array[12],array[11],array[13]);
 
-  //angle 7 - right hip[12], right knee[14] right ankle[16] 
-  angles.ang7 = ComputeAngle(array[12],array[14],array[16]);
+  //angle 7 - right shoulder[6], right hip[12] right knee[14] 
+  angles.ang7 = ComputeAngle(7, array[6],array[12],array[14]);
 
-  //angle 8 - left hip[11], left knee[13], left ankle[15]
-  angles.ang8 = ComputeAngle(array[11],array[13],array[15]);
+  //angle 8 - left shoulder[5], left hip[11], left knee[13]
+  angles.ang8 = ComputeAngle(8, array[5],array[11],array[13]);
+
+  //angle 9 - right hip[12], right knee[14] right ankle[16] 
+  angles.ang9 = ComputeAngle(9, array[12],array[14],array[16]);
+
+  //angle 10 - left hip[11], left knee[13], left ankle[15]
+  angles.ang10 = ComputeAngle(10, array[11],array[13],array[15]);
 
   //debug
   //log.info('return result', angles);
@@ -251,64 +246,53 @@ async function main() {
   let inputSize = Object.values(model.modelSignature['inputs'])[0].tensorShape.dim[2].size;
   if (inputSize === -1) inputSize = 256;
 
-/*
-  const imageFile = process.argv.length > 2 ? process.argv[2] : null;
-  if (!imageFile || !fs.existsSync(imageFile)) {
-    log.error('Specify a valid image file');
-    process.exit();
-  }
-*/
-  
-
   //save csv 
   //init
-  
-
   let result = [];
+  let alpha = ['A', 'B', 'C', 'D', 'E', 'F'];
+  let idx =   [ 68, 77, 72, 29, 79, 37];
   
+
   //data extraction
-  for( i = 1; i < 2; i++){
-    const imageFile = "data/data"+ i +".jpg";
-    const img = await loadImage(imageFile, inputSize);
-    log.info('Loaded image:', img.fileName, 'inputShape:', img.inputShape, 'modelShape:', img.modelShape, 'decoded size:', img.size);
-
-    // run actual prediction
-    const t0 = process.hrtime.bigint();
-    // for (let i = 0; i < 99; i++) model.execute(img.tensor); // benchmarking
-
-    const res = model.execute(img.tensor);
-    const t1 = process.hrtime.bigint();
-    log.info('Inference time:', Math.round(parseInt((t1 - t0).toString()) / 1000 / 1000), 'ms');
-
-    // process results
-    const results = await processResults(res, img);
-
-    //const t2 = process.hrtime.bigint();
-    //log.info('Processing time:', Math.round(parseInt((t2 - t1).toString()) / 1000 / 1000), 'ms');
-
-    // print results
-    //log.data('Results:', results);
+  for( j = 0 ; j < 1; j++){//5
+    for( i = 1; i <= 2; i++){     //제안 idx[j]로 만들어 두면 됨 임의임
+      const imageFile = "inputs/test" + i + ".jpg";
+        //"pose" + alpha[j] + "_input/data"+ i +".jpg";
+      const img = await loadImage(imageFile, inputSize);
+      log.info('Loaded image:', img.fileName, 'inputShape:', img.inputShape, 'modelShape:', img.modelShape, 'decoded size:', img.size);
   
-    //joint 값을 활용하여 8개의 앵글 값 추출
-    let data = await getAngle(i, results);
-    result.push(data);
-
-    //save result image
-    //to compare exact location of joint from each skeleton data
-    await saveImage(results, img);
+      // run actual prediction
+      const t0 = process.hrtime.bigint();
+      // for (let i = 0; i < 99; i++) model.execute(img.tensor); // benchmarking
+  
+      const res = model.execute(img.tensor);
+      const t1 = process.hrtime.bigint();
+      log.info('Inference time:', Math.round(parseInt((t1 - t0).toString()) / 1000 / 1000), 'ms');
+  
+      // process results
+      const results = await processResults(res, img);
+    
+      //joint 값을 활용하여 10개의 앵글 값 추출
+      let data = await getAngle(i, results, j);
+      //debug
+      //result.push(data);
+  
+      //save result image
+      //to compare exact location of joint from each skeleton data
+      //await saveImage(results, img);
+    }
   }
+  
   
   //save csv file 
   const csvWriter = createCsvWirter({
-    path: 'csv-writer.csv', 
+    path: 'pose_angles.csv', 
     header: csvWriterHeader,
   });
 
   csvWriter.writeRecords(result).then(() => {
     console.log('done!');
   });
-
-
 
 }
 
