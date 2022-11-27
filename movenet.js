@@ -254,10 +254,10 @@ async function main() {
   
 
   //data extraction
-  for( j = 0 ; j < 1; j++){//5
-    for( i = 1; i <= 2; i++){     //제안 idx[j]로 만들어 두면 됨 임의임
-      const imageFile = "inputs/test" + i + ".jpg";
-        //"pose" + alpha[j] + "_input/data"+ i +".jpg";
+  for( j = 5 ; j < 6; j++){//5
+    for( i = 1; i <= 37; i++){     //제안 idx[j]로 만들어 두면 됨 임의임
+      const imageFile = "pose" + alpha[j] + "_input/data"+ i +".jpg";
+      //"inputs/test" + i + ".jpg";
       const img = await loadImage(imageFile, inputSize);
       log.info('Loaded image:', img.fileName, 'inputShape:', img.inputShape, 'modelShape:', img.modelShape, 'decoded size:', img.size);
   
@@ -275,7 +275,7 @@ async function main() {
       //joint 값을 활용하여 10개의 앵글 값 추출
       let data = await getAngle(i, results, j);
       //debug
-      //result.push(data);
+      result.push(data);
   
       //save result image
       //to compare exact location of joint from each skeleton data
@@ -286,7 +286,7 @@ async function main() {
   
   //save csv file 
   const csvWriter = createCsvWirter({
-    path: 'pose_angles.csv', 
+    path: 'pose_angles_F.csv', 
     header: csvWriterHeader,
   });
 
